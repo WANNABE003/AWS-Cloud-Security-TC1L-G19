@@ -1,0 +1,31 @@
+services:
+  sqlserver:
+    image: mcr.microsoft.com/mssql/server:2022-latest
+    container_name: secure-ecommerce-sql
+    environment:
+      ACCEPT_EULA: "Y"
+      MSSQL_SA_PASSWORD: "YourStrong@Passw0rd"
+    ports:
+      - "1433:1433"
+    volumes:
+      - sqlserver-data:/var/opt/mssql
+
+  app:
+    build: .
+    container_name: secure-ecommerce-app
+    depends_on:
+      - sqlserver
+    environment:
+      PORT: "3000"
+      JWT_SECRET: "replace-this-with-a-long-random-secret"
+      DB_USER: "sa"
+      DB_PASSWORD: "YourStrong@Passw0rd"
+      DB_SERVER: "sqlserver"
+      DB_DATABASE: "SecureECommerce"
+      DB_ENCRYPT: "false"
+      DB_TRUST_CERT: "true"
+    ports:
+      - "3000:3000"
+
+volumes:
+  sqlserver-data:

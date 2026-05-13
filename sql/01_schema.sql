@@ -1,0 +1,84 @@
+IF DB_ID('SecureECommerce') IS NULL
+BEGIN
+    CREATE DATABASE SecureECommerce;
+END;
+GO
+
+USE SecureECommerce;
+GO
+
+DROP TABLE IF EXISTS AuditLog;
+DROP TABLE IF EXISTS OrderItem;
+DROP TABLE IF EXISTS CustomerOrder;
+DROP TABLE IF EXISTS Product;
+DROP TABLE IF EXISTS AppUser;
+GO
+
+CREATE TABLE AppUser (
+    UserID NVARCHAR(50) PRIMARY KEY,
+    Role NVARCHAR(30) NOT NULL CHECK (Role IN ('Customer', 'InventoryOfficer', 'Admin')),
+    Email NVARCHAR(255) NOT NULL UNIQUE,
+    FirstName NVARCHAR(80) NOT NULL,
+    LastName NVARCHAR(80) NOT NULL,
+    PhoneNumber NVARCHAR(20) MASKED WITH (FUNCTION = 'partial(2,"XXXXXX",2)') NULL,
+    AddressLine1 NVARCHAR(255) MASKED WITH (FUNCTION = 'partial(4,"XXXXXX",0)') NULL,
+    City NVARCHAR(80) NULL,
+    State NVARCHAR(80) NULL,
+    Postcode NVARCHAR(12) NULL,
+    PasswordHash NVARCHAR(255) NOT NULL,
+    IsActive BIT NOT NULL DEFAULT 1,
+    CreatedAt DATETIME2 NOT NULL DEFAULT SYSUTCDATETIME(),
+    UpdatedAt DATETIME2 NULL
+);
+
+CREATE TABLE Product (
+    ProductID NVARCHAR(50) PRIMARY KEY,
+    Name NVARCHAR(120) NOT NULL,
+    SKU NVARCHAR(40) NOT NULL UNIQUE,
+    Price DECIMAL(18,2) NOT NULL CHECK (Price > 0),
+    StockQty INT NOT NULL CHECK (StockQty >= 0),
+    Category NVARCHAR(80) NOT NULL,
+    IsActive BIT NOT NULL DEFAULT 1,
+    CreatedBy NVARCHAR(50) NOT NULL,
+    CreatedAt DATETIME2 NOT NULL DEFAULT SYSUTCDATETIME(),
+    UpdatedAt DATETIME2 NULL,
+    CONSTRAINT FK_Product_CreatedBy FOREIGN KEY (CreatedBy) REFERENCES AppUser(UserID)
+);
+
+CREATE TABLE CustomerOrder (
+    OrderID NVARCHAR(50) PRIMARY KEY,
+    UserID NVARCHAR(50) NOT NULL,
+    TotalAmount DECIMAL(18,2) NOT NULL CHECK (TotalAmount >= 0),
+    Status NVARCHAR(30) NOT NULL CHECK (Status IN ('Pending', 'Paid', 'Shipped', 'Cancelled')),
+    ShippingAddress NVARCHAR(255) MASKED WITH (FUNCTION = 'partial(6,"XXXXXX",0)') NOT NULL,
+    CreatedAt DATETIME2 NOT NULL DEFAULT SYSUTCDATETIME(),
+    UpdatedAt DATETIME2 NULL,
+    CONSTRAINT FK_Order_User FOREIGN KEY (UserID) REFERENCES AppUser(UserID)
+);
+
+CREATE TABLE OrderItem (
+    OrderItemID INT IDENTITY(1,1) PRIMARY KEY,
+    OrderID NVARCHAR(50) NOT NULL,
+    ProductID NVARCHAR(50) NOT NULL,
+    Quantity INT NOT NULL CHECK (Quantity > 0),
+    UnitPrice DECIMAL(18,2) NOT NULL CHECK (UnitPrice > 0),
+    CONSTRAINT FK_OrderItem_Order FOREIGN KEY (OrderID) REFERENCES CustomerOrder(OrderID),
+    CONSTRAINT FK_OrderItem_Product FOREIGN KEY (ProductID) REFERENCES Product(ProductID)
+);
+
+CREATE TABLE AuditLog (
+    AuditID BIGINT IDENTITY(1,1) PRIMARY KEY,
+    EventTime DATETIME2 NOT NULL DEFAULT SYSUTCDATETIME(),
+    ActorID NVARCHAR(50) NOT NULL,
+    ActorRole NVARCHAR(30) NOT NULL,
+    Action NVARCHAR(100) NOT NULL,
+    TargetType NVARCHAR(50) NOT NULL,
+    TargetID NVARCHAR(50) NULL,
+    Status NVARCHAR(30) NOT NULL,
+    IpAddress NVARCHAR(64) NULL
+);
+
+CREATE INDEX IX_Product_Active_Category ON Product(IsActive, Category);
+CREATE INDEX IX_Order_User_CreatedAt ON CustomerOrder(UserID, CreatedAt DESC);
+CREATE INDEX IX_Audit_EventTime ON AuditLog(EventTime DESC);
+GO
