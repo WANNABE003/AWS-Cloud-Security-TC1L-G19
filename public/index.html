@@ -43,6 +43,7 @@
           <table>
             <thead>
               <tr>
+                <th>Product ID</th>
                 <th>Name</th>
                 <th>SKU</th>
                 <th>Price</th>
@@ -59,7 +60,7 @@
         <h2>Create Customer Order</h2>
         <form id="orderForm" class="grid-form">
           <label>Product ID <input name="productId" placeholder="Choose from product table" required /></label>
-          <label>Quantity <input name="quantity" type="number" value="1" required /></label>
+          <label>Quantity <input name="quantity" type="number" min="1" step="1" required /></label>
           <label class="span-2">Shipping Address <input name="shippingAddress" value="12 Jalan Harmoni, Kuala Lumpur" required /></label>
           <button type="submit">Insert Order</button>
         </form>

@@ -7,6 +7,12 @@ GO
 USE SecureECommerce;
 GO
 
+DROP SECURITY POLICY IF EXISTS Security.OrderAccessPolicy;
+DROP FUNCTION IF EXISTS Security.fn_order_access;
+DROP VIEW IF EXISTS vw_CustomersForStaff;
+DROP VIEW IF EXISTS vw_ActiveProducts;
+GO
+
 DROP TABLE IF EXISTS AuditLog;
 DROP TABLE IF EXISTS OrderItem;
 DROP TABLE IF EXISTS CustomerOrder;

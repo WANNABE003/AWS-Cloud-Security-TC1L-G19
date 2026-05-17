@@ -107,6 +107,6 @@ GO
 -- Keep the certificate backup offline; losing it can make backups unrecoverable.
 
 BACKUP DATABASE SecureECommerce
-TO DISK = 'C:\SQLBackups\SecureECommerce_full.bak'
+TO DISK = '/var/opt/mssql/data/SecureECommerce_full.bak'
 WITH INIT, COMPRESSION, CHECKSUM;
 GO

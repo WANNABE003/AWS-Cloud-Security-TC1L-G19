@@ -4,13 +4,13 @@ GO
 -- Demo password for all users after running npm install:
 -- Generate a replacement hash with:
 -- node -e "require('bcryptjs').hash('Password@123',10).then(console.log)"
-DECLARE @DemoPasswordHash NVARCHAR(255) = '$2a$10$replaceWithGeneratedBcryptHashBeforeDemo';
+DECLARE @DemoPasswordHash NVARCHAR(255) = '$2a$10$w4VrF1EA/nIyn8BY7AbikOpB2nFSqu0sbEv6/wCPG0iasy3RGTQZq';
 
 INSERT INTO AppUser (UserID, Role, Email, FirstName, LastName, PhoneNumber, AddressLine1, City, State, Postcode, PasswordHash)
 VALUES
-('USR-ADMIN-001', 'Admin', 'admin@securecart.local', 'Aina', 'Rahman', '0123456789', 'Cyberjaya Office, Persiaran Multimedia', 'Cyberjaya', 'Selangor', '63000', @DemoPasswordHash),
-('USR-OFFICER-001', 'InventoryOfficer', 'officer@securecart.local', 'Daniel', 'Tan', '0132223344', 'Warehouse A, Jalan Teknologi', 'Petaling Jaya', 'Selangor', '47810', @DemoPasswordHash),
-('USR-CUST-001', 'Customer', 'customer@securecart.local', 'Maya', 'Lim', '0145556677', '12 Jalan Harmoni', 'Kuala Lumpur', 'WP Kuala Lumpur', '50480', @DemoPasswordHash);
+('USR-ADMIN-001', 'Admin', 'admin@securecart.local', 'Willie Teoh', 'Chin Wei', '0123456789', 'Cyberjaya Office, Persiaran Multimedia', 'Cyberjaya', 'Selangor', '63000', @DemoPasswordHash),
+('USR-OFFICER-001', 'InventoryOfficer', 'officer@securecart.local', 'Lam', 'Rong Yi', '0132223344', 'Warehouse A, Jalan Teknologi', 'Petaling Jaya', 'Selangor', '47810', @DemoPasswordHash),
+('USR-CUST-001', 'Customer', 'customer@securecart.local', 'Lee', 'Yu Jie', '0145556677', '12 Jalan Harmoni', 'Kuala Lumpur', 'WP Kuala Lumpur', '50480', @DemoPasswordHash);
 
 INSERT INTO Product (ProductID, Name, SKU, Price, StockQty, Category, CreatedBy)
 VALUES

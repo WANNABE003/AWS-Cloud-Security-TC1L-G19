@@ -59,6 +59,9 @@ router.post("/", requireAuth(["InventoryOfficer", "Admin"]), async (req, res, ne
     res.status(201).json({ productId });
   } catch (error) {
     if (error instanceof z.ZodError) return res.status(400).json({ error: "Invalid product data" });
+    if (error.number === 2627 || error.number === 2601) {
+      return res.status(409).json({ error: "This SKU already exists. Please use a unique SKU." });
+    }
     return next(error);
   }
 });

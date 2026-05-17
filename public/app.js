@@ -2,6 +2,50 @@ const productRows = document.querySelector("#productRows");
 const orderRows = document.querySelector("#orderRows");
 const sessionLabel = document.querySelector("#sessionLabel");
 const toast = document.querySelector("#toast");
+const securityOutput = document.querySelector("#securityOutput");
+const productForm = document.querySelector("#productForm");
+const orderForm = document.querySelector("#orderForm");
+const auditBtn = document.querySelector("#auditBtn");
+const customersBtn = document.querySelector("#customersBtn");
+let currentUser = null;
+
+function makeSku() {
+  return `SKU-FSH-${Date.now().toString().slice(-5)}`;
+}
+
+function resetUiState() {
+  productRows.innerHTML = "";
+  orderRows.innerHTML = "";
+  securityOutput.textContent = "Security test output appears here.";
+  productForm.reset();
+  orderForm.reset();
+}
+
+function setFormDisabled(form, disabled) {
+  [...form.elements].forEach((element) => {
+    element.disabled = disabled;
+  });
+}
+
+function applyRoleUi(role) {
+  const canManageProducts = role === "Admin" || role === "InventoryOfficer";
+  const canCreateOrders = role === "Customer";
+  const canViewAudit = role === "Admin";
+  const canViewMaskedCustomers = role === "Admin" || role === "InventoryOfficer";
+
+  setFormDisabled(productForm, !canManageProducts);
+  setFormDisabled(orderForm, !canCreateOrders);
+  auditBtn.disabled = !canViewAudit;
+  customersBtn.disabled = !canViewMaskedCustomers;
+}
+
+function prepareRoleInputs(role) {
+  resetUiState();
+  applyRoleUi(role);
+  if (role === "Admin" || role === "InventoryOfficer") {
+    productForm.elements.sku.value = makeSku();
+  }
+}
 
 function showToast(message) {
   toast.textContent = message;
@@ -23,8 +67,12 @@ async function loadMe() {
   try {
     const data = await api("/api/auth/me");
     sessionLabel.textContent = `${data.user.name} (${data.user.role})`;
+    currentUser = data.user;
+    return data.user;
   } catch {
     sessionLabel.textContent = "Not signed in";
+    currentUser = null;
+    return null;
   }
 }
 
@@ -34,11 +82,12 @@ async function loadProducts() {
   data.products.forEach((product) => {
     const row = document.createElement("tr");
     row.innerHTML = `
-      <td>${product.Name}<br><small>${product.ProductID}</small></td>
+      <td>${product.ProductID}</td>
+      <td>${product.Name}</td>
       <td>${product.SKU}</td>
       <td>RM ${Number(product.Price).toFixed(2)}</td>
       <td>${product.StockQty}</td>
-      <td><button class="danger" data-delete="${product.ProductID}" type="button">Delete</button></td>
+      <td><button class="danger" data-delete="${product.ProductID}" type="button" ${currentUser?.role === "Admin" ? "" : "disabled"}>Delete</button></td>
     `;
     productRows.append(row);
   });
@@ -63,7 +112,8 @@ document.querySelector("#loginForm").addEventListener("submit", async (event) =>
       body: JSON.stringify(Object.fromEntries(form))
     });
     showToast("Signed in");
-    await loadMe();
+    const user = await loadMe();
+    prepareRoleInputs(user?.role);
     await Promise.allSettled([loadProducts(), loadOrders()]);
   } catch (error) {
     showToast(error.message);
@@ -74,13 +124,20 @@ document.querySelector("#logoutBtn").addEventListener("click", async () => {
   try {
     await api("/api/auth/logout", { method: "POST" });
     sessionLabel.textContent = "Not signed in";
+    currentUser = null;
+    resetUiState();
+    applyRoleUi(null);
     showToast("Signed out");
   } catch (error) {
+    sessionLabel.textContent = "Not signed in";
+    currentUser = null;
+    resetUiState();
+    applyRoleUi(null);
     showToast(error.message);
   }
 });
 
-document.querySelector("#productForm").addEventListener("submit", async (event) => {
+productForm.addEventListener("submit", async (event) => {
   event.preventDefault();
   const form = new FormData(event.currentTarget);
   const payload = Object.fromEntries(form);
@@ -111,13 +168,17 @@ productRows.addEventListener("click", async (event) => {
   }
 });
 
-document.querySelector("#orderForm").addEventListener("submit", async (event) => {
+orderForm.addEventListener("submit", async (event) => {
   event.preventDefault();
   const form = new FormData(event.currentTarget);
   const payload = Object.fromEntries(form);
   payload.quantity = Number(payload.quantity);
 
   try {
+    if (!Number.isInteger(payload.quantity) || payload.quantity < 1) {
+      throw new Error("Quantity must be at least 1.");
+    }
+
     const data = await api("/api/orders", {
       method: "POST",
       body: JSON.stringify(payload)
@@ -132,8 +193,9 @@ document.querySelector("#orderForm").addEventListener("submit", async (event) =>
 document.querySelector("#auditBtn").addEventListener("click", async () => {
   try {
     const data = await api("/api/security/audit");
-    document.querySelector("#securityOutput").textContent = JSON.stringify(data.auditLogs, null, 2);
+    securityOutput.textContent = JSON.stringify(data.auditLogs, null, 2);
   } catch (error) {
+    securityOutput.textContent = "Security test output appears here.";
     showToast(error.message);
   }
 });
@@ -141,10 +203,16 @@ document.querySelector("#auditBtn").addEventListener("click", async () => {
 document.querySelector("#customersBtn").addEventListener("click", async () => {
   try {
     const data = await api("/api/security/masked-customers");
-    document.querySelector("#securityOutput").textContent = JSON.stringify(data.customers, null, 2);
+    securityOutput.textContent = JSON.stringify(data.customers, null, 2);
   } catch (error) {
+    securityOutput.textContent = "Security test output appears here.";
     showToast(error.message);
   }
 });
 
-loadMe().then(() => Promise.allSettled([loadProducts(), loadOrders()]));
+resetUiState();
+applyRoleUi(null);
+loadMe().then((user) => {
+  prepareRoleInputs(user?.role);
+  return Promise.allSettled([loadProducts(), loadOrders()]);
+});

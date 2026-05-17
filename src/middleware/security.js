@@ -14,11 +14,11 @@ const securityHeaders = helmet({
 });
 
 const loginLimiter = rateLimit({
-  windowMs: 15 * 60 * 1000,
+  windowMs: 1 * 60 * 1000,
   max: 5,
   standardHeaders: true,
   legacyHeaders: false,
-  message: { error: "Too many login attempts. Try again later." }
+  message: { error: "Too many login attempts. Please try again 1 minute later." }
 });
 
 module.exports = { securityHeaders, loginLimiter };
