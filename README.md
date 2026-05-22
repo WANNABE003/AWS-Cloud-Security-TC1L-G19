@@ -91,115 +91,9 @@ Open:
 http://localhost:3000
 ```
 
-## Option 2: Run Without Docker
+## Option 2: Run Fully Inside Oracle VirtualBox
 
-Use this option when running SQL Server and SSMS inside an Oracle VirtualBox Windows VM, or when SQL Server is installed directly on Windows.
-
-### 1. Install Required Software
-
-Install:
-
-- Node.js 20 or newer
-- Microsoft SQL Server Developer Edition
-- SQL Server Management Studio (SSMS)
-
-If using Oracle VirtualBox, install SQL Server and SSMS inside the Windows VM. Make sure the VM network allows your host machine to access SQL Server if the Node app runs outside the VM. The simplest setup is to run both SQL Server and the Node app inside the same VM.
-
-### 2. Create SQL Server Login
-
-In SSMS, connect to your SQL Server instance. You may use:
-
-```text
-Login: sa
-Password: your SQL Server password
-```
-
-If `sa` login is disabled, enable SQL Server Authentication and restart SQL Server service, or create a new SQL login with permission to create and use the `SecureECommerce` database.
-
-### 3. Run Database Scripts
-
-Open SSMS and run:
-
-```text
-sql/01_schema.sql
-```
-
-Install Node dependencies:
-
-```bash
-npm install
-```
-
-On Windows PowerShell, use this if `npm.ps1` is blocked by execution policy:
-
-```powershell
-npm.cmd install
-```
-
-Generate a bcrypt hash:
-
-```bash
-node scripts/hash-password.js Password@123
-```
-
-Copy the generated hash and replace this placeholder in `sql/02_seed.sql`:
-
-```text
-$2a$10$replaceWithGeneratedBcryptHashBeforeDemo
-```
-
-Then run:
-
-```text
-sql/02_seed.sql
-```
-
-For a normal Windows SQL Server installation, keep or create this backup folder before running `sql/03_security.sql`:
-
-```text
-C:\SQLBackups
-```
-
-Then run:
-
-```text
-sql/03_security.sql
-```
-
-### 4. Configure `.env`
-
-Copy `.env.example` to `.env` and update the database settings.
-
-Example for SQL Server on the same machine:
-
-```env
-PORT=3000
-JWT_SECRET=replace-with-a-long-random-secret
-DB_USER=sa
-DB_PASSWORD=Password123
-DB_SERVER=localhost
-DB_DATABASE=SecureECommerce
-DB_ENCRYPT=false
-DB_TRUST_CERT=true
-```
-
-If the Node app runs on your host but SQL Server runs inside a VirtualBox VM, replace `DB_SERVER=localhost` with the VM IP address. Example:
-
-```env
-DB_SERVER=192.168.56.10
-```
-
-### 5. Start The Web App
-
-```bash
-npm run dev
-```
-
-Open `http://localhost:3000`.
-
-## Option 3: Run Fully Inside Oracle VirtualBox
-
-Use this option if your course requires the whole system to run in an Oracle VirtualBox virtual machine. This is the easiest VirtualBox method because SQL Server, SSMS, Node.js, and the web app all run inside the same Windows VM.
+Use this option if using Oracle VirtualBox virtual machine. This is the easiest VirtualBox method because SQL Server, SSMS, Node.js, and the web app all run inside the same Windows VM.
 
 ### 1. Prepare The Virtual Machine
 
@@ -368,12 +262,3 @@ The application has three roles. The UI disables actions that the logged-in role
 | InventoryOfficer | Yes | No | No | No | Yes |
 | Customer | No | No | Yes | No | No |
 
-Expected demo flow:
-
-1. Login as Admin to delete products and view audit logs.
-2. Login as InventoryOfficer to insert fashion products and view masked customer data.
-3. Login as Customer to create orders only.
-
-## Report Helpers
-
-Use `docs/report-outline.md` for a concise report draft aligned to the assignment tasks, including STRIDE, DREAD, PDPA mapping, and screenshot checklist.
