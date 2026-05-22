@@ -4,7 +4,7 @@ GO
 -- Demo password for all users after running npm install:
 -- Generate a replacement hash with:
 -- node -e "require('bcryptjs').hash('Password@123',10).then(console.log)"
-DECLARE @DemoPasswordHash NVARCHAR(255) = '$2a$10$w4VrF1EA/nIyn8BY7AbikOpB2nFSqu0sbEv6/wCPG0iasy3RGTQZq';
+DECLARE @DemoPasswordHash NVARCHAR(255) = '$2a$10$VUkpRGYNXTKhhj9yFjsnReB8mYDGAU0F8B/jzf2HYiiyWT5rdRH4.';
 
 INSERT INTO AppUser (UserID, Role, Email, FirstName, LastName, PhoneNumber, AddressLine1, City, State, Postcode, PasswordHash)
 VALUES

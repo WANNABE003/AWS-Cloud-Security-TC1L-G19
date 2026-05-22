@@ -48,3 +48,4 @@ function requireAuth(roles = []) {
 }
 
 module.exports = { cookieName, signSession, verifySession, comparePassword, requireAuth };
+

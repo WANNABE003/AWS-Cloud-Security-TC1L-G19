@@ -4,7 +4,7 @@ services:
     container_name: secure-ecommerce-sql
     environment:
       ACCEPT_EULA: "Y"
-      MSSQL_SA_PASSWORD: "YourStrong@Passw0rd"
+      MSSQL_SA_PASSWORD: "Password123"
     ports:
       - "1433:1433"
     volumes:
@@ -19,7 +19,7 @@ services:
       PORT: "3000"
       JWT_SECRET: "replace-this-with-a-long-random-secret"
       DB_USER: "sa"
-      DB_PASSWORD: "YourStrong@Passw0rd"
+      DB_PASSWORD: "Password123"
       DB_SERVER: "sqlserver"
       DB_DATABASE: "SecureECommerce"
       DB_ENCRYPT: "false"

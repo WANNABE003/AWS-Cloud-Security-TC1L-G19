@@ -37,7 +37,7 @@ Server type: Database Engine
 Server name: localhost,1433
 Authentication: SQL Server Authentication
 Login: sa
-Password: YourStrong@Passw0rd
+Password: Password123
 Trust server certificate: checked
 ```
 
@@ -176,7 +176,7 @@ Example for SQL Server on the same machine:
 PORT=3000
 JWT_SECRET=replace-with-a-long-random-secret
 DB_USER=sa
-DB_PASSWORD=YourStrong@Passw0rd
+DB_PASSWORD=Password123
 DB_SERVER=localhost
 DB_DATABASE=SecureECommerce
 DB_ENCRYPT=false
@@ -299,7 +299,7 @@ Example if SQL Server is running locally in the VM:
 PORT=3000
 JWT_SECRET=replace-with-a-long-random-secret
 DB_USER=sa
-DB_PASSWORD=YourStrong@Passw0rd
+DB_PASSWORD=Password123
 DB_SERVER=localhost
 DB_DATABASE=SecureECommerce
 DB_ENCRYPT=false

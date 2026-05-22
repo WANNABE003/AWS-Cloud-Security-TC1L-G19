@@ -81,6 +81,9 @@ IF SCHEMA_ID('Security') IS NULL
     EXEC('CREATE SCHEMA Security');
 GO
 
+DROP SECURITY POLICY IF EXISTS Security.OrderAccessPolicy;
+GO
+
 CREATE OR ALTER FUNCTION Security.fn_order_access(@UserID NVARCHAR(50))
 RETURNS TABLE
 WITH SCHEMABINDING
@@ -91,22 +94,59 @@ RETURN
        OR CONVERT(NVARCHAR(30), SESSION_CONTEXT(N'user_role')) = 'Admin';
 GO
 
-DROP SECURITY POLICY IF EXISTS Security.OrderAccessPolicy;
-GO
-
 CREATE SECURITY POLICY Security.OrderAccessPolicy
 ADD FILTER PREDICATE Security.fn_order_access(UserID) ON dbo.CustomerOrder
 WITH (STATE = ON);
 GO
 
--- Transparent Data Encryption notes for a real server:
--- 1. Create master key in master database.
--- 2. Create certificate protected by the master key.
--- 3. Create database encryption key in SecureECommerce.
--- 4. ALTER DATABASE SecureECommerce SET ENCRYPTION ON.
--- Keep the certificate backup offline; losing it can make backups unrecoverable.
+-- Transparent Data Encryption (TDE) Implementation:
+-- 1. Create a Database Master Key in the master database.
+USE master;
+GO
+IF NOT EXISTS (SELECT 1 FROM sys.symmetric_keys WHERE name = '##MS_DatabaseMasterKey##')
+BEGIN
+    CREATE MASTER KEY ENCRYPTION BY PASSWORD = 'DatabaseMasterKeyPassword@123!';
+END;
+GO
+
+-- 2. Create a certificate protected by the master key.
+IF NOT EXISTS (SELECT 1 FROM sys.certificates WHERE name = 'SecureECommerceTDECert')
+BEGIN
+    CREATE CERTIFICATE SecureECommerceTDECert WITH SUBJECT = 'TDE Certificate for SecureECommerce';
+END;
+GO
+
+-- 2.1 Back up the TDE certificate and private key.
+-- Required for restoring encrypted database backups on another SQL Server instance.
+BACKUP CERTIFICATE SecureECommerceTDECert
+TO FILE = '/var/opt/mssql/data/SecureECommerceTDECert.cer'
+WITH PRIVATE KEY (
+    FILE = '/var/opt/mssql/data/SecureECommerceTDECert_PrivateKey.pvk',
+    ENCRYPTION BY PASSWORD = 'TDEPrivateKeyPassword@123!'
+);
+GO
+
+-- 3. Create the Database Encryption Key (DEK) in the user database.
+USE SecureECommerce;
+GO
+IF NOT EXISTS (SELECT 1 FROM sys.dm_database_encryption_keys WHERE database_id = DB_ID('SecureECommerce'))
+BEGIN
+    EXEC('CREATE DATABASE ENCRYPTION KEY WITH ALGORITHM = AES_256 ENCRYPTION BY SERVER CERTIFICATE SecureECommerceTDECert');
+END;
+GO
+
+-- 4. Enable Transparent Data Encryption (TDE) on the database.
+IF EXISTS (SELECT 1 FROM sys.databases WHERE name = 'SecureECommerce' AND is_encrypted = 0)
+BEGIN
+    ALTER DATABASE SecureECommerce SET ENCRYPTION ON;
+END;
+GO
+
+-- Note: Keep the certificate backup offline; losing it can make backups unrecoverable.
+
 
 BACKUP DATABASE SecureECommerce
 TO DISK = '/var/opt/mssql/data/SecureECommerce_full.bak'
-WITH INIT, COMPRESSION, CHECKSUM;
+WITH INIT, FORMAT, COMPRESSION, CHECKSUM;
 GO
+
