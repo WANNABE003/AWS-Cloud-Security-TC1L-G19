@@ -13,7 +13,11 @@ const productSchema = z.object({
   category: z.string().min(2).max(80)
 });
 
-router.get("/", requireAuth(["Customer", "InventoryOfficer", "Admin"]), async (req, res, next) => {
+const deleteStockSchema = z.object({
+  quantity: z.number().int().positive()
+});
+
+router.get("/", async (req, res, next) => {
   try {
     const result = await query(
       `SELECT ProductID, Name, SKU, Price, StockQty, Category, IsActive, CreatedAt
@@ -68,17 +72,37 @@ router.post("/", requireAuth(["InventoryOfficer", "Admin"]), async (req, res, ne
 
 router.delete("/:id", requireAuth(["Admin"]), async (req, res, next) => {
   try {
+    const body = deleteStockSchema.parse(req.body);
+    const productResult = await query(
+      `SELECT ProductID, StockQty
+       FROM Product
+       WHERE ProductID = @productId AND IsActive = 1`,
+      { productId: { type: sql.NVarChar(50), value: req.params.id } }
+    );
+
+    const product = productResult.recordset[0];
+    if (!product) return res.status(404).json({ error: "Product not found" });
+    if (body.quantity > product.StockQty) {
+      return res.status(400).json({ error: "Delete quantity cannot be more than current stock." });
+    }
+
+    const remainingStock = product.StockQty - body.quantity;
     const result = await query(
       `UPDATE Product
-       SET IsActive = 0, UpdatedAt = SYSUTCDATETIME()
-       WHERE ProductID = @productId`,
-      { productId: { type: sql.NVarChar(50), value: req.params.id } }
+       SET StockQty = @remainingStock,
+           IsActive = CASE WHEN @remainingStock = 0 THEN 0 ELSE IsActive END,
+           UpdatedAt = SYSUTCDATETIME()
+       WHERE ProductID = @productId AND IsActive = 1`,
+      {
+        productId: { type: sql.NVarChar(50), value: req.params.id },
+        remainingStock: { type: sql.Int, value: remainingStock }
+      }
     );
 
     await audit({
       actorId: req.user.userId,
       actorRole: req.user.role,
-      action: "ProductDeleted",
+      action: remainingStock === 0 ? "ProductDeleted" : "ProductStockReduced",
       targetType: "Product",
       targetId: req.params.id,
       status: result.rowsAffected[0] === 1 ? "Success" : "NotFound",
@@ -86,8 +110,9 @@ router.delete("/:id", requireAuth(["Admin"]), async (req, res, next) => {
     });
 
     if (result.rowsAffected[0] !== 1) return res.status(404).json({ error: "Product not found" });
-    return res.json({ ok: true });
+    return res.json({ ok: true, remainingStock });
   } catch (error) {
+    if (error instanceof z.ZodError) return res.status(400).json({ error: "Delete quantity must be at least 1." });
     return next(error);
   }
 });

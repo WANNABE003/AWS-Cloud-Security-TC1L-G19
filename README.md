@@ -5,12 +5,23 @@ This project is a SQL Server-backed secure fashion e-commerce management system 
 ## Features
 
 - Role-based access for `Customer`, `InventoryOfficer`, and `Admin`
+- Customer self-registration from the login screen
 - Parameterized SQL queries through the `mssql` driver
 - Password hashing with bcrypt
 - HTTP hardening with Helmet and login rate limiting
-- Audit logging for login, logout, product, and order actions
+- Audit logging for registration, login, logout, product, and order actions
 - SQL Server scripts for schema, sample data, roles, views, row-level security, dynamic data masking, triggers, backup, and encryption notes
-- Simple web UI for report screenshots: add product, delete product, add another product, create order, view audit logs
+- Storefront-style web UI for report screenshots: register customer, browse products, cart checkout, insert product, reduce/delete product stock by quantity, insert another product, view audit logs, and view masked customer data
+
+## System Modules
+
+The application is organized around three role-based modules, matching the report structure:
+
+| Module | Main Functions |
+| --- | --- |
+| Customer Module | Register, sign in, browse fashion products, add items to cart, and place orders |
+| Inventory Officer Module | Add fashion products and view masked customer records for operational checks |
+| Admin Module | Reduce/delete product stock, view masked customer records, and review audit logs |
 
 ## Option 1: Run With Docker
 
@@ -49,19 +60,7 @@ In SSMS, run:
 sql/01_schema.sql
 ```
 
-Generate the demo password hash using Docker:
-
-```powershell
-docker compose run --rm app node scripts/hash-password.js Password@123
-```
-
-Copy the generated hash and replace this placeholder in `sql/02_seed.sql`:
-
-```text
-$2a$10$replaceWithGeneratedBcryptHashBeforeDemo
-```
-
-Then run:
+Then run the seed data script. The seed file already contains a bcrypt hash for the demo password `Password@123`.
 
 ```text
 sql/02_seed.sql
@@ -153,19 +152,7 @@ Install Node dependencies:
 npm.cmd install
 ```
 
-Generate the demo password hash:
-
-```powershell
-node scripts/hash-password.js Password@123
-```
-
-Copy the generated hash and replace this placeholder in `sql/02_seed.sql`:
-
-```text
-$2a$10$replaceWithGeneratedBcryptHashBeforeDemo
-```
-
-Then run:
+Then run the seed data script. The seed file already contains a bcrypt hash for the demo password `Password@123`.
 
 ```text
 sql/02_seed.sql
@@ -246,6 +233,8 @@ http://localhost:3000
 
 All seed users use password `Password@123`.
 
+New shoppers can also select **Register** on the login screen. Registration creates a `Customer` account only; staff and admin accounts should stay controlled through the database seed/admin setup.
+
 | Role | Email |
 | --- | --- |
 | Admin | admin@securecart.local |
@@ -256,20 +245,23 @@ All seed users use password `Password@123`.
 
 The application has three roles. The UI disables actions that the logged-in role is not allowed to perform, and the backend still enforces the same permission checks.
 
-| Role | Add Product | Delete Product | Create Order | View Audit Logs | View Masked Customers |
+| Role | Add Product | Reduce/Delete Product Stock | Create Order | View Audit Logs | View Masked Customers |
 | --- | --- | --- | --- | --- | --- |
 | Admin | Yes | Yes | No | Yes | Yes |
 | InventoryOfficer | Yes | No | No | No | Yes |
 | Customer | No | No | Yes | No | No |
+
+Users see the login/register screen first. After signing in, the navigation appears based on the user's role, and customers can browse the storefront catalog and place orders.
 
 ## Audit Log Coverage
 
 The `AuditLog` table records important security and business actions, including:
 
 - Successful and failed login attempts
+- Customer registration
 - Logout actions
 - Product creation
-- Product deletion
+- Product stock reduction and deletion
 - Order creation
 - Product updates through SQL trigger
 - Order inserts through SQL trigger
