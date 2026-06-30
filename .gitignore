@@ -3,3 +3,9 @@ node_modules/
 *.log
 coverage/
 .DS_Store
+.terraform/
+*.tfstate
+*.tfstate.*
+*.tfplan
+terraform/terraform.tfvars
+crash.log

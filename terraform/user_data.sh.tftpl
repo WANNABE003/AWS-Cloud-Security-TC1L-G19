@@ -1,0 +1,138 @@
+#!/bin/bash
+set -euo pipefail
+exec > >(tee /var/log/securestyle-bootstrap.log | logger -t user-data -s 2>/dev/console) 2>&1
+
+dnf update -y
+dnf install -y git nginx openssl postgresql16 amazon-cloudwatch-agent
+curl -fsSL https://rpm.nodesource.com/setup_20.x | bash -
+dnf install -y nodejs
+
+id securestyle >/dev/null 2>&1 || useradd --system --home /opt/securestyle --shell /sbin/nologin securestyle
+rm -rf /opt/securestyle
+git clone --depth 1 --branch "${repository_branch}" "${repository_url}" /opt/securestyle
+cd /opt/securestyle
+npm install --omit=dev --no-audit --no-fund
+
+install -d -m 0755 /etc/pki/rds
+curl -fsSL https://truststore.pki.rds.amazonaws.com/global/global-bundle.pem -o /etc/pki/rds/global-bundle.pem
+chmod 0644 /etc/pki/rds/global-bundle.pem
+
+MASTER_DB_PASSWORD=$(aws ssm get-parameter --region "${aws_region}" --name "${master_password_parameter}" --with-decryption --query 'Parameter.Value' --output text)
+APP_DB_PASSWORD=$(aws ssm get-parameter --region "${aws_region}" --name "${app_password_parameter}" --with-decryption --query 'Parameter.Value' --output text)
+JWT_SECRET=$(aws ssm get-parameter --region "${aws_region}" --name "${jwt_parameter}" --with-decryption --query 'Parameter.Value' --output text)
+
+export PGPASSWORD="$${MASTER_DB_PASSWORD}"
+PSQL=(psql "host=${db_host} port=5432 dbname=${db_name} user=${db_username} sslmode=verify-full sslrootcert=/etc/pki/rds/global-bundle.pem" -v ON_ERROR_STOP=1)
+SCHEMA_EXISTS=$("$${PSQL[@]}" -tAc "SELECT to_regclass('public.appuser') IS NOT NULL")
+if [[ "$${SCHEMA_EXISTS}" != "t" ]]; then
+  "$${PSQL[@]}" -f sql/postgres_01_schema.sql
+  "$${PSQL[@]}" -f sql/postgres_02_seed.sql
+fi
+"$${PSQL[@]}" -f sql/postgres_03_security.sql
+"$${PSQL[@]}" -v app_password="$${APP_DB_PASSWORD}" -c "ALTER ROLE app_service PASSWORD :'app_password';"
+unset PGPASSWORD MASTER_DB_PASSWORD
+
+install -m 0600 -o root -g root /dev/null /etc/securestyle.env
+cat > /etc/securestyle.env <<ENV
+NODE_ENV=production
+PORT=3000
+JWT_SECRET=$${JWT_SECRET}
+DB_HOST=${db_host}
+DB_PORT=5432
+DB_USER=app_service
+DB_PASSWORD=$${APP_DB_PASSWORD}
+DB_DATABASE=${db_name}
+DB_SSL=true
+DB_SSL_CA=/etc/pki/rds/global-bundle.pem
+ENV
+unset APP_DB_PASSWORD JWT_SECRET
+
+chown -R securestyle:securestyle /opt/securestyle
+touch /var/log/secure-ecommerce.log
+chown securestyle:securestyle /var/log/secure-ecommerce.log
+
+cat > /etc/systemd/system/securestyle.service <<'UNIT'
+[Unit]
+Description=SecureStyle Node.js application
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+User=securestyle
+Group=securestyle
+WorkingDirectory=/opt/securestyle
+EnvironmentFile=/etc/securestyle.env
+ExecStart=/usr/bin/node src/server.js
+Restart=always
+RestartSec=5
+StandardOutput=append:/var/log/secure-ecommerce.log
+StandardError=append:/var/log/secure-ecommerce.log
+NoNewPrivileges=true
+PrivateTmp=true
+ProtectSystem=strict
+ProtectHome=true
+ReadWritePaths=/var/log/secure-ecommerce.log
+
+[Install]
+WantedBy=multi-user.target
+UNIT
+
+PUBLIC_IP=$(curl -fsS -X PUT -H 'X-aws-ec2-metadata-token-ttl-seconds: 60' http://169.254.169.254/latest/api/token | xargs -I TOKEN curl -fsS -H 'X-aws-ec2-metadata-token: TOKEN' http://169.254.169.254/latest/meta-data/public-ipv4)
+openssl req -x509 -nodes -newkey rsa:2048 -days 30 \
+  -keyout /etc/pki/tls/private/securestyle.key \
+  -out /etc/pki/tls/certs/securestyle.crt \
+  -subj "/CN=$${PUBLIC_IP}" -addext "subjectAltName=IP:$${PUBLIC_IP}"
+
+cat > /etc/nginx/nginx.conf <<'NGINX'
+user nginx;
+worker_processes auto;
+error_log /var/log/nginx/error.log notice;
+pid /run/nginx.pid;
+events { worker_connections 1024; }
+http {
+    include /etc/nginx/mime.types;
+    default_type application/octet-stream;
+    access_log /var/log/nginx/access.log;
+    sendfile on;
+    server {
+        listen 80;
+        server_name _;
+        return 301 https://$host$request_uri;
+    }
+    server {
+        listen 443 ssl;
+        server_name _;
+        ssl_certificate /etc/pki/tls/certs/securestyle.crt;
+        ssl_certificate_key /etc/pki/tls/private/securestyle.key;
+        ssl_protocols TLSv1.2 TLSv1.3;
+        add_header Strict-Transport-Security "max-age=31536000" always;
+        location / {
+            proxy_pass http://127.0.0.1:3000;
+            proxy_set_header Host $host;
+            proxy_set_header X-Forwarded-Proto https;
+            proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        }
+    }
+}
+NGINX
+
+cat > /opt/aws/amazon-cloudwatch-agent/etc/amazon-cloudwatch-agent.json <<CW
+{
+  "logs": {
+    "logs_collected": {
+      "files": {
+        "collect_list": [{
+          "file_path": "/var/log/secure-ecommerce.log",
+          "log_group_name": "${log_group_name}",
+          "log_stream_name": "{instance_id}"
+        }]
+      }
+    }
+  }
+}
+CW
+
+systemctl daemon-reload
+systemctl enable --now securestyle nginx
+/opt/aws/amazon-cloudwatch-agent/bin/amazon-cloudwatch-agent-ctl -a fetch-config -m ec2 -s -c file:/opt/aws/amazon-cloudwatch-agent/etc/amazon-cloudwatch-agent.json

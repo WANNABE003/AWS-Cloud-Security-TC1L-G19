@@ -63,7 +63,7 @@ router.post("/register", async (req, res, next) => {
     res.status(201).json({ userId, email });
   } catch (error) {
     if (error instanceof z.ZodError) return res.status(400).json({ error: "Invalid registration data" });
-    if (error.number === 2627 || error.number === 2601) {
+    if (error.code === '23505' || error.number === 2627 || error.number === 2601) {
       return res.status(409).json({ error: "This email is already registered." });
     }
     return next(error);

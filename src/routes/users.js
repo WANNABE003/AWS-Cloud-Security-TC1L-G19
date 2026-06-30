@@ -86,7 +86,7 @@ router.patch("/:id", requireAuth(["Admin"]), async (req, res, next) => {
     res.json({ ok: true });
   } catch (error) {
     if (error instanceof z.ZodError) return res.status(400).json({ error: "Invalid user data" });
-    if (error.number === 2627 || error.number === 2601) {
+    if (error.code === '23505' || error.number === 2627 || error.number === 2601) {
       return res.status(409).json({ error: "This email is already used by another user." });
     }
     return next(error);
@@ -101,7 +101,7 @@ router.delete("/:id", requireAuth(["Admin"]), async (req, res, next) => {
 
     const result = await query(
       `UPDATE AppUser
-       SET IsActive = 0, UpdatedAt = DATEADD(HOUR, 8, SYSUTCDATETIME())
+       SET IsActive = FALSE, UpdatedAt = DATEADD(HOUR, 8, SYSUTCDATETIME())
        WHERE UserID = @userId`,
       { userId: { type: sql.NVarChar(50), value: req.params.id } }
     );

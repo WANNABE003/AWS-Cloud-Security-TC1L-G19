@@ -24,7 +24,7 @@ router.get("/", requireAuth(["Customer", "InventoryOfficer", "Admin"]), async (r
        FROM CustomerOrder o
        INNER JOIN OrderItem oi ON o.OrderID = oi.OrderID
        INNER JOIN Product p ON oi.ProductID = p.ProductID
-       WHERE (@isStaff = 1 OR o.UserID = @userId)
+       WHERE (@isStaff OR o.UserID = @userId)
        ORDER BY o.CreatedAt DESC`,
       {
         isStaff: { type: sql.Bit, value: isStaff },
@@ -50,8 +50,9 @@ router.post("/", requireAuth(["Customer"]), async (req, res, next) => {
     request.input("productId", sql.NVarChar(50), body.productId);
     const productResult = await request.query(
       `SELECT ProductID, Price, StockQty
-       FROM Product WITH (UPDLOCK, ROWLOCK)
-       WHERE ProductID = @productId AND IsActive = 1`
+       FROM Product
+       WHERE ProductID = @productId AND IsActive = TRUE
+       FOR UPDATE`
     );
 
     const product = productResult.recordset[0];
@@ -72,14 +73,16 @@ router.post("/", requireAuth(["Customer"]), async (req, res, next) => {
 
     await orderRequest.query(
       `INSERT INTO CustomerOrder (OrderID, UserID, TotalAmount, Status, ShippingAddress, CreatedAt)
-       VALUES (@orderId, @userId, @total, 'Pending', @shippingAddress, DATEADD(HOUR, 8, SYSUTCDATETIME()));
-
-       INSERT INTO OrderItem (OrderID, ProductID, Quantity, UnitPrice)
-       VALUES (@orderId, @productId, @quantity, @unitPrice);
-
-       UPDATE Product
+       VALUES (@orderId, @userId, @total, 'Pending', @shippingAddress, DATEADD(HOUR, 8, SYSUTCDATETIME()))`
+    );
+    await orderRequest.query(
+      `INSERT INTO OrderItem (OrderID, ProductID, Quantity, UnitPrice)
+       VALUES (@orderId, @productId, @quantity, @unitPrice)`
+    );
+    await orderRequest.query(
+      `UPDATE Product
        SET StockQty = StockQty - @quantity, UpdatedAt = DATEADD(HOUR, 8, SYSUTCDATETIME())
-       WHERE ProductID = @productId;`
+       WHERE ProductID = @productId`
     );
 
     await transaction.commit();
@@ -119,8 +122,9 @@ router.patch("/:id/status", requireAuth(["InventoryOfficer", "Admin"]), async (r
     orderRequest.input("orderId", sql.NVarChar(50), req.params.id);
     const orderResult = await orderRequest.query(
       `SELECT OrderID, Status
-       FROM CustomerOrder WITH (UPDLOCK, ROWLOCK)
-       WHERE OrderID = @orderId`
+       FROM CustomerOrder
+       WHERE OrderID = @orderId
+       FOR UPDATE`
     );
 
     const order = orderResult.recordset[0];
@@ -147,13 +151,12 @@ router.patch("/:id/status", requireAuth(["InventoryOfficer", "Admin"]), async (r
       const restoreRequest = new sql.Request(transaction);
       restoreRequest.input("orderId", sql.NVarChar(50), req.params.id);
       await restoreRequest.query(
-        `UPDATE p
-         SET p.StockQty = p.StockQty + oi.Quantity,
-             p.IsActive = 1,
-             p.UpdatedAt = DATEADD(HOUR, 8, SYSUTCDATETIME())
-         FROM Product p
-         INNER JOIN OrderItem oi ON p.ProductID = oi.ProductID
-         WHERE oi.OrderID = @orderId`
+        `UPDATE Product p
+         SET StockQty = p.StockQty + oi.Quantity,
+             IsActive = TRUE,
+             UpdatedAt = DATEADD(HOUR, 8, SYSUTCDATETIME())
+         FROM OrderItem oi
+         WHERE p.ProductID = oi.ProductID AND oi.OrderID = @orderId`
       );
     }
 

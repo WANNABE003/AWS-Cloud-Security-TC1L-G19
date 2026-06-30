@@ -3,3 +3,7 @@ npm-debug.log
 .env
 .git
 coverage
+.terraform
+*.tfstate
+*.tfstate.*
+terraform/terraform.tfvars

@@ -26,7 +26,7 @@ router.get("/", async (req, res, next) => {
     const result = await query(
       `SELECT ProductID, Name, SKU, Price, StockQty, Category, IsActive, CreatedAt
        FROM Product
-       WHERE IsActive = 1
+       WHERE IsActive = TRUE
        ORDER BY CreatedAt DESC`
     );
     res.json({ products: result.recordset });
@@ -67,7 +67,7 @@ router.post("/", requireAuth(["InventoryOfficer", "Admin"]), async (req, res, ne
     res.status(201).json({ productId });
   } catch (error) {
     if (error instanceof z.ZodError) return res.status(400).json({ error: "Invalid product data" });
-    if (error.number === 2627 || error.number === 2601) {
+    if (error.code === '23505' || error.number === 2627 || error.number === 2601) {
       return res.status(409).json({ error: "This SKU already exists. Please use a unique SKU." });
     }
     return next(error);
@@ -80,7 +80,7 @@ router.delete("/:id", requireAuth(["Admin"]), async (req, res, next) => {
     const productResult = await query(
       `SELECT ProductID, StockQty
        FROM Product
-       WHERE ProductID = @productId AND IsActive = 1`,
+       WHERE ProductID = @productId AND IsActive = TRUE`,
       { productId: { type: sql.NVarChar(50), value: req.params.id } }
     );
 
@@ -94,9 +94,9 @@ router.delete("/:id", requireAuth(["Admin"]), async (req, res, next) => {
     const result = await query(
       `UPDATE Product
        SET StockQty = @remainingStock,
-           IsActive = CASE WHEN @remainingStock = 0 THEN 0 ELSE IsActive END,
+           IsActive = CASE WHEN @remainingStock = 0 THEN FALSE ELSE IsActive END,
            UpdatedAt = DATEADD(HOUR, 8, SYSUTCDATETIME())
-       WHERE ProductID = @productId AND IsActive = 1`,
+       WHERE ProductID = @productId AND IsActive = TRUE`,
       {
         productId: { type: sql.NVarChar(50), value: req.params.id },
         remainingStock: { type: sql.Int, value: remainingStock }
@@ -127,7 +127,7 @@ router.patch("/:id/stock", requireAuth(["InventoryOfficer", "Admin"]), async (re
     const result = await query(
       `UPDATE Product
        SET StockQty = StockQty + @quantity,
-           IsActive = 1,
+           IsActive = TRUE,
            UpdatedAt = DATEADD(HOUR, 8, SYSUTCDATETIME())
        WHERE ProductID = @productId`,
       {

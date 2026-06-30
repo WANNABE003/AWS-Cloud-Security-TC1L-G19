@@ -1,31 +1,41 @@
 services:
-  sqlserver:
-    image: mcr.microsoft.com/mssql/server:2022-latest
-    container_name: secure-ecommerce-sql
+  database:
+    image: postgres:16-alpine
+    container_name: secure-ecommerce-postgres
     environment:
-      ACCEPT_EULA: "Y"
-      MSSQL_SA_PASSWORD: "Password123"
-    ports:
-      - "1433:1433"
+      POSTGRES_DB: secureecommerce
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: LocalOnlyPassword123!
     volumes:
-      - sqlserver-data:/var/opt/mssql
+      - postgres-data:/var/lib/postgresql/data
+      - ./sql/postgres_01_schema.sql:/docker-entrypoint-initdb.d/01_schema.sql:ro
+      - ./sql/postgres_02_seed.sql:/docker-entrypoint-initdb.d/02_seed.sql:ro
+      - ./sql/postgres_03_security.sql:/docker-entrypoint-initdb.d/03_security.sql:ro
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres -d secureecommerce"]
+      interval: 5s
+      timeout: 3s
+      retries: 20
+    ports:
+      - "5432:5432"
 
   app:
     build: .
     container_name: secure-ecommerce-app
     depends_on:
-      - sqlserver
+      database:
+        condition: service_healthy
     environment:
       PORT: "3000"
-      JWT_SECRET: "replace-this-with-a-long-random-secret"
-      DB_USER: "sa"
-      DB_PASSWORD: "Password123"
-      DB_SERVER: "sqlserver"
-      DB_DATABASE: "SecureECommerce"
-      DB_ENCRYPT: "false"
-      DB_TRUST_CERT: "true"
+      JWT_SECRET: "local-development-secret-change-before-deployment"
+      DB_HOST: "database"
+      DB_PORT: "5432"
+      DB_USER: "postgres"
+      DB_PASSWORD: "LocalOnlyPassword123!"
+      DB_DATABASE: "secureecommerce"
+      DB_SSL: "false"
     ports:
       - "3000:3000"
 
 volumes:
-  sqlserver-data:
+  postgres-data:

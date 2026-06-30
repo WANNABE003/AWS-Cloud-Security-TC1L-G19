@@ -1,6 +1,5 @@
 const bcrypt = require("bcryptjs");
 const jwt = require("jsonwebtoken");
-const { setSecurityContext } = require("./db");
 
 const cookieName = "secure_cart_session";
 
@@ -31,21 +30,15 @@ async function comparePassword(password, passwordHash) {
 }
 
 function requireAuth(roles = []) {
-  return async (req, res, next) => {
+  return (req, res, next) => {
     const user = verifySession(req.cookies[cookieName]);
     if (!user) return res.status(401).json({ error: "Authentication required" });
     if (roles.length > 0 && !roles.includes(user.role)) {
       return res.status(403).json({ error: "Access denied" });
     }
     req.user = user;
-    try {
-      await setSecurityContext(user);
-      return next();
-    } catch (error) {
-      return next(error);
-    }
+    return next();
   };
 }
 
 module.exports = { cookieName, signSession, verifySession, comparePassword, requireAuth };
-

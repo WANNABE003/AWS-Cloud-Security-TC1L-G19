@@ -2,7 +2,7 @@
   "name": "secure-ecommerce-management-system",
   "version": "1.0.0",
   "private": true,
-  "description": "CCS6344 Assignment 1 SQL-backed secure e-commerce management system.",
+  "description": "CCS6344 Assignment 2 secure localhost-to-AWS e-commerce migration.",
   "main": "src/server.js",
   "scripts": {
     "start": "node src/server.js",
@@ -17,7 +17,7 @@
     "express-rate-limit": "^7.2.0",
     "helmet": "^7.1.0",
     "jsonwebtoken": "^9.0.2",
-    "mssql": "^11.0.1",
+    "pg": "^8.11.5",
     "zod": "^3.23.8"
   }
 }
