@@ -41,17 +41,22 @@ resource "aws_lb_listener" "http" {
   protocol          = "HTTP"
 
   default_action {
-    type = "redirect"
-    redirect {
-      port        = "443"
-      protocol    = "HTTPS"
-      status_code = "HTTP_301"
+    type = length(var.certificate_arn) > 0 ? "redirect" : "forward"
+    target_group_arn = length(var.certificate_arn) > 0 ? null : aws_lb_target_group.app[0].arn
+
+    dynamic "redirect" {
+      for_each = length(var.certificate_arn) > 0 ? [1] : []
+      content {
+        port        = "443"
+        protocol    = "HTTPS"
+        status_code = "HTTP_301"
+      }
     }
   }
 }
 
 resource "aws_lb_listener" "https" {
-  count             = var.enable_alb ? 1 : 0
+  count             = var.enable_alb && length(var.certificate_arn) > 0 ? 1 : 0
   load_balancer_arn = aws_lb.app[0].arn
   port              = 443
   protocol          = "HTTPS"
@@ -141,4 +146,34 @@ resource "aws_wafv2_web_acl_association" "app" {
   count        = var.enable_waf ? 1 : 0
   resource_arn = aws_lb.app[0].arn
   web_acl_arn  = aws_wafv2_web_acl.app[0].arn
+}
+
+# WAF logging — CloudWatch Logs group name must start with "aws-waf-logs-"
+resource "aws_cloudwatch_log_group" "waf" {
+  count             = var.enable_waf ? 1 : 0
+  name              = "aws-waf-logs-${local.name}"
+  retention_in_days = 30
+  tags              = { Name = "${local.name}-waf-logs" }
+}
+
+resource "aws_cloudwatch_log_resource_policy" "waf" {
+  count           = var.enable_waf ? 1 : 0
+  policy_name     = "${local.name}-waf-log-policy"
+  policy_document = jsonencode({
+    Version = "2012-10-17"
+    Statement = [{
+      Effect    = "Allow"
+      Principal = { Service = "delivery.logs.amazonaws.com" }
+      Action    = ["logs:CreateLogStream", "logs:PutLogEvents"]
+      Resource  = "${aws_cloudwatch_log_group.waf[0].arn}:*"
+      Condition = { StringEquals = { "aws:SourceAccount" = data.aws_caller_identity.current.account_id } }
+    }]
+  })
+}
+
+resource "aws_wafv2_web_acl_logging_configuration" "app" {
+  count                   = var.enable_waf ? 1 : 0
+  log_destination_configs = [aws_cloudwatch_log_group.waf[0].arn]
+  resource_arn            = aws_wafv2_web_acl.app[0].arn
+  depends_on              = [aws_cloudwatch_log_resource_policy.waf]
 }
