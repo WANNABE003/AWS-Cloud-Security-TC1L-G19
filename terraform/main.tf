@@ -14,10 +14,10 @@ check "waf_requires_alb" {
   }
 }
 
-check "alb_requires_tls_identity" {
+check "alb_https_requires_cert" {
   assert {
-    condition     = !var.enable_alb || (length(var.certificate_arn) > 0 && length(var.application_domain) > 0)
-    error_message = "ALB mode requires certificate_arn and application_domain."
+    condition     = length(var.certificate_arn) == 0 || length(var.application_domain) > 0
+    error_message = "When certificate_arn is set, application_domain must also be provided."
   }
 }
 
