@@ -55,13 +55,19 @@ variable "db_instance_class" {
 variable "enable_alb" {
   description = "Adds the rubric load balancer. May incur cost; requires certificate_arn."
   type        = bool
-  default     = false
+  default     = true
 }
 
 variable "enable_waf" {
   description = "Adds AWS WAF to the ALB. WAF is billed; requires enable_alb=true."
   type        = bool
-  default     = false
+  default     = true
+}
+
+variable "enable_multi_az" {
+  description = "Enables RDS Multi-AZ standby for high availability. Recommended for production; set false to reduce demo costs."
+  type        = bool
+  default     = true
 }
 
 variable "certificate_arn" {
