@@ -69,12 +69,16 @@ resource "aws_wafv2_web_acl" "app" {
   name  = "${local.name}-waf"
   scope = "REGIONAL"
 
-  default_action { allow {} }
+  default_action {
+    allow {}
+  }
 
   rule {
     name     = "AWSCommonThreats"
     priority = 10
-    override_action { none {} }
+    override_action {
+      none {}
+    }
     statement {
       managed_rule_group_statement {
         name        = "AWSManagedRulesCommonRuleSet"
@@ -91,7 +95,9 @@ resource "aws_wafv2_web_acl" "app" {
   rule {
     name     = "RateLimit"
     priority = 20
-    action { block {} }
+    action {
+      block {}
+    }
     statement {
       rate_based_statement {
         aggregate_key_type = "IP"
@@ -108,7 +114,9 @@ resource "aws_wafv2_web_acl" "app" {
   rule {
     name     = "AWSSQLInjection"
     priority = 15
-    override_action { none {} }
+    override_action {
+      none {}
+    }
     statement {
       managed_rule_group_statement {
         name        = "AWSManagedRulesSQLiRuleSet"

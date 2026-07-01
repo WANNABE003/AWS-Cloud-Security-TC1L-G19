@@ -29,7 +29,7 @@ if [[ "$${SCHEMA_EXISTS}" != "t" ]]; then
   "$${PSQL[@]}" -f sql/postgres_02_seed.sql
 fi
 "$${PSQL[@]}" -f sql/postgres_03_security.sql
-"$${PSQL[@]}" -v app_password="$${APP_DB_PASSWORD}" -c "ALTER ROLE app_service PASSWORD :'app_password';"
+"$${PSQL[@]}" -c "ALTER ROLE app_service PASSWORD '$${APP_DB_PASSWORD}';"
 unset PGPASSWORD MASTER_DB_PASSWORD
 
 install -m 0600 -o root -g root /dev/null /etc/securestyle.env
