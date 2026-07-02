@@ -33,8 +33,8 @@ Docker is not required. The application runs directly on EC2 behind Nginx.
 | Role | Email | Password |
 |---|---|---|
 | Customer | `customer@securecart.local` | `Password@123` |
-| Administrator | `admin@securecart.local` | `Admin@123` |
-| Inventory Officer | `officer@securecart.local` | `Officer@123` |
+| Administrator | `admin@securecart.local` | `Password@123` |
+| Inventory Officer | `officer@securecart.local` | `Password@123` |
 
 These accounts are for classroom demonstration only.
 
