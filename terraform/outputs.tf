@@ -1,6 +1,6 @@
 output "application_url" {
-  description = "Open this URL. Direct mode uses a self-signed classroom certificate."
-  value       = var.enable_alb ? "https://${var.application_domain}" : "https://${aws_instance.app.public_ip}"
+  description = "Application URL"
+  value       = "https://securestyle.duckdns.org"
 }
 
 output "ec2_instance_id" {
