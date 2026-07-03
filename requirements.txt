@@ -1,0 +1,6 @@
+# command | winget package ID | display name
+# Used by install-requirements.ps1. This is not a Python pip requirements file.
+git|Git.Git|Git
+terraform|Hashicorp.Terraform|Terraform
+aws|Amazon.AWSCLI|AWS CLI v2
+node|OpenJS.NodeJS.LTS|Node.js LTS

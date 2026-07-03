@@ -23,6 +23,8 @@ public/                     Frontend
 src/                        Node.js/Express backend
 sql/postgres_*.sql          PostgreSQL schema, seed data and permissions
 terraform/                  AWS Infrastructure as Code
+requirements.txt            Required software and installation checklist
+install-requirements.ps1    Installs only missing required software
 ```
 
 Docker is not required. The application runs directly on EC2 behind Nginx.
@@ -47,7 +49,39 @@ These accounts are for classroom demonstration only.
 
 ## First-time AWS deployment
 
-Prerequisites: Git, Terraform 1.6+, AWS CLI v2 and an AWS account with sufficient permissions.
+First obtain the project. If Git is already installed:
+
+```powershell
+git clone https://github.com/WANNABE003/AWS-Cloud-Security-TC1L-G19.git
+cd .\AWS-Cloud-Security-TC1L-G19
+```
+
+If Git is not installed, download the repository ZIP from GitHub, extract it, open PowerShell, and change to the extracted project folder.
+
+### Where to run commands
+
+| Task | Required directory |
+|---|---|
+| Install required software | Project root: `AWS-Cloud-Security-TC1L-G19` |
+| Configure or verify AWS credentials | Any directory |
+| Run Terraform commands | `AWS-Cloud-Security-TC1L-G19\terraform` |
+| Run the application locally with npm | Project root: `AWS-Cloud-Security-TC1L-G19` |
+
+Required software is listed in [`requirements.txt`](requirements.txt). From the project root, run:
+
+```powershell
+cd "C:\path\to\AWS-Cloud-Security-TC1L-G19"
+powershell -ExecutionPolicy Bypass -File .\install-requirements.ps1
+```
+
+The installer checks Git, Terraform, AWS CLI and Node.js. Existing tools are skipped automatically; only missing tools are installed through `winget`. Close and reopen PowerShell afterward, then verify:
+
+```powershell
+git --version
+terraform -version
+aws --version
+node --version
+```
 
 ### Configure AWS credentials
 
@@ -85,9 +119,10 @@ aws sts get-caller-identity
 
 Never commit the AWS credentials file, access keys, session tokens, `.env`, `terraform.tfvars`, Terraform state or saved plan files.
 
+Change to the Terraform directory before running any Terraform commands:
+
 ```powershell
-git clone https://github.com/WANNABE003/AWS-Cloud-Security-TC1L-G19.git
-cd .\AWS-Cloud-Security-TC1L-G19\terraform
+cd "C:\path\to\AWS-Cloud-Security-TC1L-G19\terraform"
 
 Copy-Item .\terraform.tfvars.example .\terraform.tfvars
 notepad .\terraform.tfvars
