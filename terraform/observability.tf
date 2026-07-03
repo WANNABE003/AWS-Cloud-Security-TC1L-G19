@@ -54,7 +54,7 @@ resource "aws_s3_bucket_lifecycle_configuration" "audit" {
     id     = "expire-classroom-demo-logs"
     status = "Enabled"
 
-    filter {}   # ✅ ADD THIS
+    filter {} # ✅ ADD THIS
 
     expiration {
       days = 30

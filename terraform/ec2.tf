@@ -37,16 +37,16 @@ resource "aws_instance" "app" {
   }
 
   user_data = templatefile("${path.module}/user_data.sh.tftpl", {
-    aws_region               = var.aws_region
-    db_host                  = aws_db_instance.postgres.address
-    db_name                  = var.db_name
-    db_username              = var.db_username
+    aws_region                = var.aws_region
+    db_host                   = aws_db_instance.postgres.address
+    db_name                   = var.db_name
+    db_username               = var.db_username
     master_password_parameter = aws_ssm_parameter.db_master_password.name
-    app_password_parameter   = aws_ssm_parameter.db_app_password.name
-    jwt_parameter            = aws_ssm_parameter.jwt_secret.name
-    repository_url           = var.repository_url
-    repository_branch        = var.repository_branch
-    log_group_name           = aws_cloudwatch_log_group.app.name
+    app_password_parameter    = aws_ssm_parameter.db_app_password.name
+    jwt_parameter             = aws_ssm_parameter.jwt_secret.name
+    repository_url            = var.repository_url
+    repository_branch         = var.repository_branch
+    log_group_name            = aws_cloudwatch_log_group.app.name
   })
 
   user_data_replace_on_change = true

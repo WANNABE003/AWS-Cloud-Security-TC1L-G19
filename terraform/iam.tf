@@ -24,9 +24,9 @@ resource "aws_iam_role_policy" "app" {
     Version = "2012-10-17"
     Statement = [
       {
-        Sid      = "ReadOnlyThisApplicationsSecrets"
-        Effect   = "Allow"
-        Action   = ["ssm:GetParameter", "ssm:GetParameters"]
+        Sid    = "ReadOnlyThisApplicationsSecrets"
+        Effect = "Allow"
+        Action = ["ssm:GetParameter", "ssm:GetParameters"]
         Resource = [
           aws_ssm_parameter.db_master_password.arn,
           aws_ssm_parameter.db_app_password.arn,
