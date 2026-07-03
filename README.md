@@ -163,24 +163,11 @@ If temporary AWS credentials expire, replace the values in `$HOME\.aws\credentia
 After deployment, wait several minutes for EC2 initialization:
 
 ```powershell
-$AppUrl = terraform output -raw application_url
-
-curl.exe -k -i "$AppUrl/health"
+curl.exe -k -i  "https://securestyle.duckdns.org/health"
 ```
 
 Expected health result: HTTP `200 OK`.
 
-## Local development
-
-```powershell
-npm install
-Copy-Item .\.env.example .\.env
-notepad .\.env
-npm run check
-npm start
-```
-
-A reachable PostgreSQL database must be configured in `.env`. Never commit `.env`, AWS credentials, `terraform.tfvars`, Terraform state or saved plan files.
 
 ## Cleanup
 
