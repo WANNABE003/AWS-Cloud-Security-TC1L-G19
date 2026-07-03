@@ -98,7 +98,7 @@ Recommended `terraform.tfvars` values:
 ```hcl
 aws_region   = "us-east-1"
 project_name = "securestyle"
-environment  = "group19"
+environment  = "demo"
 
 repository_url    = "https://github.com/WANNABE003/AWS-Cloud-Security-TC1L-G19.git"
 repository_branch = "main"
@@ -128,39 +128,12 @@ If temporary AWS credentials expire, replace the values in `$HOME\.aws\credentia
 After deployment, wait several minutes for EC2 initialization:
 
 ```powershell
-$Region       = "us-east-1"
-$AppUrl       = terraform output -raw application_url
-$InstanceId   = terraform output -raw ec2_instance_id
-$DbEndpoint   = terraform output -raw rds_endpoint
-$DbIdentifier = $DbEndpoint.Split(".")[0]
+$AppUrl = terraform output -raw application_url
 
 curl.exe -k -i "$AppUrl/health"
 ```
 
 Expected health result: HTTP `200 OK`.
-
-Run the combined security validation from the repository root:
-
-```powershell
-cd ..
-powershell -ExecutionPolicy Bypass `
-  -File .\scripts\test-security.ps1 `
-  -BaseUrl $AppUrl `
-  -Region $Region `
-  -DbIdentifier $DbIdentifier `
-  -InstanceId $InstanceId
-```
-
-Expected security results:
-
-- Ports 80 and 443 are open.
-- Ports 22, 3000 and 5432 are closed externally.
-- Malicious login input is rejected.
-- RDS and EBS encryption are enabled.
-- RDS is not publicly accessible.
-- CloudTrail events are available.
-
-Only test systems that you own or are authorized to test.
 
 ## Local development
 
