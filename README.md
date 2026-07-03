@@ -119,7 +119,7 @@ terraform apply deployment.tfplan
 terraform output
 ```
 
-`terraform apply` creates AWS resources and may consume credits or incur charges. With the settings above, resources use names such as `securestyle-group19-app` and `securestyle-group19-postgres`.
+`terraform apply` creates AWS resources and may consume credits or incur charges. With the settings above, resources use names such as `securestyle-demo-app` and `securestyle-demo-postgres`.
 
 If temporary AWS credentials expire, replace the values in `$HOME\.aws\credentials` and run `aws sts get-caller-identity` again.
 
