@@ -1,14 +1,10 @@
-aws_region        = "ap-southeast-1"
-repository_url    = "https://github.com/YOUR-GITHUB-USER/YOUR-REPOSITORY.git"
+aws_region   = "us-east-1"
+project_name = "securestyle"
+environment  = "demo"
+
+repository_url    = "https://github.com/WANNABE003/AWS-Cloud-Security-TC1L-G19.git"
 repository_branch = "main"
-alert_email       = "you@example.com"
 
-# Keep these false for the lowest-cost deployment.
-enable_alb = false
-enable_waf = false
-
-# Rubric demo mode (billable) requires all three values below instead:
-# enable_alb      = true
-# enable_waf      = true
-# certificate_arn = "arn:aws:acm:ap-southeast-1:123456789012:certificate/uuid"
-# application_domain = "shop.example.com"
+alert_email = ""
+enable_alb  = false
+enable_waf  = false
